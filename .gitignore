@@ -1,5 +1,9 @@
-TestCase
-.inp
-.out
-.exe
-output
+# Bỏ qua file test input/output
+*.inp
+*.out
+
+# Bỏ qua file thực thi
+*.exe
+
+# Bỏ qua thư mục chứa kết quả
+output/
