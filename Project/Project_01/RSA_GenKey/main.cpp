@@ -39,7 +39,8 @@ public:
         }
     }
 
-    static BigInt fromLittleEndianHex(const string &hexStr) {
+    static BigInt hexToBigInt(const string &hexStr)
+    {
         BigInt res;
         res.num.clear();
         string s = hexStr;
@@ -51,10 +52,12 @@ public:
         if (clean.size() % 8 != 0)
             clean.append(8 - clean.size() % 8, '0');
 
-        for (size_t i = 0; i < clean.size(); i += 8) {
+        for (size_t i = 0; i < clean.size(); i += 8)
+        {
             string part = clean.substr(i, 8);
             uint32_t val = 0;
-            for (int j = 0; j < 8; j++) {
+            for (int j = 0; j < 8; j++)
+            {
                 char ch = part[j];
                 val |= (uint32_t)((ch >= 'A' ? ch - 'A' + 10 : ch - '0')) << (4 * j);
             }
@@ -64,10 +67,13 @@ public:
         return res;
     }
 
-    string toLittleEndianHex() const {
+    string bigIntToHex() const
+    {
         string s;
-        for (uint32_t block : num) {
-            for (int i = 0; i < 8; i++) {
+        for (uint32_t block : num)
+        {
+            for (int i = 0; i < 8; i++)
+            {
                 uint32_t nibble = (block >> (4 * i)) & 0xF;
                 s.push_back(nibble < 10 ? '0' + nibble : 'A' + nibble - 10);
             }
@@ -93,7 +99,7 @@ public:
             uint64_t num2 = (index < other.num.size() ? other.num[index] : 0);
 
             uint64_t sum = num1 + num2 + carry;
-            result.num.push_back(sum & 0xffffffffu); // get 32 bit at the end
+            result.num.push_back(sum & 0xffffffffu);
             carry = sum >> 32;
             index++;
         }
@@ -226,7 +232,6 @@ public:
         size_t blocks = bits / 32;
         uint32_t shiftBits = bits % 32;
 
-        // Dịch block
         result.num.insert(result.num.begin(), blocks, 0);
 
         if (shiftBits)
@@ -243,32 +248,6 @@ public:
         }
         return result;
     }
-    BigInt div(const BigInt &other) const
-    {
-        BigInt quotient(0);
-        BigInt remainder(0);
-
-        for (int i = this->num.size() * 32 - 1; i >= 0; --i)
-        {
-            // Dịch trái remainder 1 bit
-            remainder = remainder.shiftLeft(1);
-            if ((this->num[i / 32] >> (i % 32)) & 1)
-                remainder.num[0] |= 1;
-
-            if (!(remainder < other))
-            {
-                remainder = remainder - other;
-                quotient = quotient.shiftLeft(1);
-                quotient.num[0] |= 1;
-            }
-            else
-            {
-                quotient = quotient.shiftLeft(1);
-            }
-        }
-        return quotient;
-    }
-
     BigInt mod(const BigInt &other) const
     {
         BigInt remainder(0);
@@ -347,23 +326,26 @@ BigInt gcdExtended(BigInt a, BigInt b, BigInt &x, BigInt &y)
     return gcd;
 }
 
-BigInt findPublicKey(BigInt delta)
+// BigInt findPublicKey(BigInt delta)
+// {
+//     vector<long> listE = {3, 5, 17, 257, 65537};
+
+//     for (int i = 0; i < listE.size(); i++)
+//     {
+//         BigInt x = 1;
+//         BigInt y = 1;
+
+//         if (gcdExtended(listE[i], delta, x, y) == 1)
+//         {
+//             return listE[i];
+//         }
+//     }
+
+//     return 0;
+// }
+
+BigInt findSecrectKey(BigInt e, BigInt delta)
 {
-    vector<long> listE = {3,5,17,257,65537};
-
-    for (int i = 0; i < listE.size(); i++){
-        BigInt x = 1;
-        BigInt y = 1;
-
-        if (gcdExtended(listE[i], delta, x, y) == 1){
-            return listE[i];
-        }
-    }
-
-    return 0;
-}
-
-BigInt findSecrectKey (BigInt e, BigInt delta) {
 
     BigInt a = delta;
     BigInt b = e;
@@ -371,7 +353,8 @@ BigInt findSecrectKey (BigInt e, BigInt delta) {
     BigInt x0 = 0;
     BigInt x1 = 1;
 
-    while (!b.isZero()){
+    while (!b.isZero())
+    {
         BigInt q = a / b;
         BigInt temp = b;
         b = a - q * b;
@@ -382,12 +365,12 @@ BigInt findSecrectKey (BigInt e, BigInt delta) {
         x0 = temp;
     }
 
-    if (!(a == 1)){
+    if (!(a == 1))
+    {
         return 0;
     }
 
     return x0.mod(delta);
-
 }
 
 BigInt keyGen(BigInt p, BigInt q, BigInt e)
@@ -397,18 +380,17 @@ BigInt keyGen(BigInt p, BigInt q, BigInt e)
 
     BigInt delta = (--p) * (--q);
 
-
     BigInt d = findSecrectKey(e, delta);
 
     return d;
-
 }
 
 int main(int argc, char *argv[])
 {
 
-    if (argc != 3){
-        cerr << "Somethings is Wrong with your input";
+    if (argc != 3)
+    {
+        cerr << "Somethings is Wrong with input";
         return 1;
     }
 
@@ -420,7 +402,8 @@ int main(int argc, char *argv[])
     ifstream fi(fileIn);
     ofstream fo(fileO);
 
-    if (!fi.is_open() || !fo.is_open()){
+    if (!fi.is_open() || !fo.is_open())
+    {
         cerr << "File I/O is not open";
         return 1;
     }
@@ -430,17 +413,18 @@ int main(int argc, char *argv[])
     getline(fi, qHex);
     getline(fi, eHex);
 
-    BigInt p = BigInt::fromLittleEndianHex(pHex);
-    BigInt q = BigInt::fromLittleEndianHex(qHex);
-    BigInt e = BigInt::fromLittleEndianHex(eHex);
+    BigInt q = BigInt::hexToBigInt(qHex);
+    BigInt p = BigInt::hexToBigInt(pHex);
+    BigInt e = BigInt::hexToBigInt(eHex);
 
     BigInt d = keyGen(p, q, e);
 
-    if (d.isZero()){
+    if (d.isZero())
+    {
         fo << -1 << endl;
-    }else{
-        fo << d.toLittleEndianHex() << endl;
     }
-
-
+    else
+    {
+        fo << d.bigIntToHex() << endl;
+    }
 }
