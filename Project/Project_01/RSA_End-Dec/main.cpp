@@ -3,6 +3,8 @@
 #include <sstream>
 #include <fstream>
 
+#include <iomanip>
+
 using namespace std;
 
 class BigInt
@@ -38,12 +40,66 @@ public:
         }
     }
 
-    void displayNum(){
-        for (int i = 0; i < this->num.size(); i++){
-            cout << this->num[i] << " ";
-        }
-        cout << endl;
+    void displayNum() const {
+    cout << "0x";
+    // In từ block cao nhất đến thấp nhất (thường dễ đọc hơn)
+    for (int i = num.size() - 1; i >= 0; i--) {
+        // In mỗi block với 8 chữ số hexa, có thêm các số 0 ở đầu nếu thiếu
+        cout << hex << setw(8) << setfill('0') << uppercase << num[i];
     }
+    cout << dec << endl; // chuyển lại sang hệ 10 để tránh ảnh hưởng về sau
+    }
+
+    void displayNumBin() const {
+        if (num.empty()) { cout << "0b0\n"; return; }
+        cout << "0b";
+
+        bool started = false;
+        for (int i = (int)num.size() - 1; i >= 0; --i) {
+            for (int bit = 31; bit >= 0; --bit) {
+                bool bitValue = (num[i] >> bit) & 1u;
+                if (bitValue) started = true;
+                if (started) cout << bitValue;
+            }
+        }
+        if (!started) cout << '0'; // nếu toàn là 0
+        cout << '\n';
+    }
+
+    void displayNumDec() const {
+    if (num.empty()) {
+        cout << "0\n";
+        return;
+    }
+
+    // Tạo 1 bản copy để chia dần ra cơ số 10
+    vector<uint32_t> temp = num;
+    vector<uint8_t> digits; // lưu chữ số thập phân (ngược)
+
+    while (!(temp.size() == 1 && temp[0] == 0)) {
+        uint64_t carry = 0;
+        // Chia temp cho 10, giống như chia tay lớn
+        for (int i = (int)temp.size() - 1; i >= 0; --i) {
+            uint64_t cur = (carry << 32) + temp[i];
+            temp[i] = static_cast<uint32_t>(cur / 10);
+            carry = cur % 10;
+        }
+
+        digits.push_back(static_cast<uint8_t>(carry));
+
+        // Bỏ block 0 ở cuối
+        while (temp.size() > 1 && temp.back() == 0)
+            temp.pop_back();
+    }
+
+    // In ngược lại (vì digits chứa từ LSD → MSD)
+    for (int i = (int)digits.size() - 1; i >= 0; --i)
+        cout << char('0' + digits[i]);
+    cout << '\n';
+}
+
+
+
 
     vector<uint32_t> getData (){return this->num;}
     size_t bitLenght () const {
@@ -368,36 +424,68 @@ vector<BigInt> readFile (string fileName){
 
 }
 
-BigInt gcdExtended(BigInt a, BigInt b, BigInt &x, BigInt &y)
+BigInt gcdExtended(BigInt a, BigInt b)
 {
 
-    if (a.isZero())
-    {
-        x = 0;
-        y = 1;
-        return b;
+    // if (b.isZero())
+    // {
+    //     x = BigInt(1);
+    //     y = BigInt(0);
+    //     return a;
+    // }
+
+    // BigInt x1, y1;
+    // BigInt gcd = gcdExtended(b, a.mod(b), x1, y1);
+
+    // x = y1;
+    // y = x1 - (a.div(b)) * y1;
+    // // y = (x1.mod(b) + b - ((a / b) * y1).mod(b)).mod(b);
+    // cout << "invX:"; x.displayNumDec();
+    // return gcd;
+
+    BigInt originB = b;
+    BigInt x0 = BigInt(0);
+    BigInt x1 = BigInt(1);
+
+    if (originB == 1){
+        return BigInt(0);
     }
 
-    BigInt x1, y1;
-    BigInt gcd = gcdExtended(b.mod(a), a, x1, y1);
+    while (a > BigInt(1)){
+        BigInt q = a.div(b);
+        BigInt tmpB = b;
 
-    x = y1 - (b / a) * x1;
-    y = x1;
-    return gcd;
+        b = a.mod(b);
+        a = tmpB;
+
+        tmpB = x0;
+
+        BigInt tmpMul = q * x0;
+
+        if (x1 >= tmpMul){
+            x0 = x1 - tmpMul;
+        }else{
+            x0 = originB - (tmpMul - x1);
+        }
+
+        x1 = tmpB;
+    }
+
+    return x1.mod(originB);
+
 }
+
 
 vector<BigInt> initMont (BigInt N, BigInt x, BigInt R){
 
     // find N' = (-(N^-1) mod R + R) mod R
-    BigInt a;
-    BigInt b;
-    BigInt gcdN = gcdExtended(N, R, a, b);
-    if (gcdN != 1){
-        cerr << "invModN can't be found" << endl;
-        return {};
-    }
-    BigInt invModN = (a.mod(R) + R).mod(R);
-    BigInt invN = (R - (invModN.mod(R))).mod(R);
+    // BigInt gcdN = gcdExtended(N, R);
+    // if (gcdN != 1){
+    //     cerr << "invModN can't be found" << endl;
+    //     return {};
+    // }
+    BigInt invModN = gcdExtended(N, R);
+    BigInt invN = (R - invModN);
 
     // convert x to montgomery number
     BigInt xFormated = (x * R).mod(N);
@@ -424,7 +512,9 @@ BigInt montMul (BigInt a, BigInt b, BigInt N, BigInt invN, BigInt R){
 
 BigInt decrypt (BigInt x, BigInt k, BigInt N){
 
-    cout << N.bitLenght() << endl;
+    cout << "N: "; N.displayNum();
+    cout << "k: "; k.displayNumBin();
+    cout <<"x: "; x.displayNum();
 
     BigInt R = BigInt(1).shiftLeft(N.bitLenght() + 1); //R > N | N - 11 bits --> R - 12 bits
     BigInt res = toMontNum(BigInt(1), N, R);
@@ -432,13 +522,15 @@ BigInt decrypt (BigInt x, BigInt k, BigInt N){
     BigInt xFormated = initList[0];
     BigInt invN = initList[1]; //N'
     
-    R.displayNum();
-    invN.displayNum();
+    cout << "R: "; R.displayNumDec();
+    cout << "N': "; invN.displayNumDec();
 
     for (int block = k.getData().size() - 1; block >= 0; block--) {
         uint32_t bits = k.getData()[block];
         for (int i = 31; i >= 0; i--) { // traverse bits High -> Low
             res = montMul(res, res, N, invN, R); // ^2
+            cout << "bit (" << (bits >> i) << ")";
+            cout << "square: "; res.displayNum();
             if ((bits >> i) & 1) {
                 res = montMul(res, xFormated, N, invN, R); // multiply if bit=1
             }
