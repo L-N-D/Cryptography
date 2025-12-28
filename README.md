@@ -4,7 +4,6 @@ University of Science – VNU-HCM
 ---
 
 ## Student Information
-- Student ID: 23127177  
 - Name: Le Nhat Duy  
 - Class: K23  
 - Year: 2025  
