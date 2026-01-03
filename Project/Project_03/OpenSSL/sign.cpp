@@ -40,6 +40,7 @@ bool writeSign(const char* filename,
     ofstream fout(filename, ios::binary);
     if (!fout) {
         cerr << "Khong ghi duoc file chu ky\n";
+        cerr << filename << "\n";
         return false;
     }
     fout.write((char*)sig.data(), siglen);

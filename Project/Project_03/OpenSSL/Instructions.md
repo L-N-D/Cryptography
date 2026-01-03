@@ -36,8 +36,8 @@ Thư mục làm việc gồm các file:
 ## 3. Biên dịch chương trình
 
 ```bash
-g++ sign.cpp -o sign -lcrypto
-g++ verify.cpp -o verify -lcrypto
+g++ sign.cpp -o signKey -lcrypto
+g++ verify.cpp -o verifyKey -lcrypto
 ```
 
 Sau bước này sẽ có:
@@ -85,7 +85,7 @@ echo "Hello RSA Signature" > mess
 Cú pháp:
 
 ```bash
-./sign priv.pem mess sign
+./signKey priv.pem mess sign
 ```
 
 Ý nghĩa:
@@ -107,7 +107,7 @@ Ky thanh cong
 Cú pháp:
 
 ```bash
-./verify pub.pem mess sign
+./verifyKey pub.pem mess sign
 ```
 
 Ý nghĩa:
